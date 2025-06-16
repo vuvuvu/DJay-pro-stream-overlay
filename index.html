@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Now Playing Overlay</title>
+  <style>
+    /* Reset some defaults and set transparent background */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: #fff;
+    }
+    /* Container for the overlay elements */
+    .overlay-container {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px 20px;
+      border-radius: 10px;
+      min-width: 300px;
+    }
+    .now-playing {
+      font-size: 18px;
+      line-height: 1.4;
+    }
+    .now-playing .label {
+      color: #888;
+      font-size: 14px;
+      display: block;
+    }
+    .now-playing .value {
+      color: #fff;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay-container">
+    <div class="now-playing">
+      <span class="label">Title</span>
+      <span class="value" id="songTitle">Loading...</span>
+      
+      <span class="label">Artist</span>
+      <span class="value" id="artist">Loading...</span>
+      
+      <span class="label">Album</span>
+      <span class="value" id="album">Loading...</span>
+      
+      <span class="label">Duration</span>
+      <span class="value" id="duration">Loading...</span>
+    </div>
+  </div>
+
+  <script>
+    /****************************
+     * Now Playing File Display *
+     ****************************/
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 3000; // 3 seconds
+
+    async function readNowPlayingFile() {
+      try {
+        const response = await fetch('djay Media Library.djayMediaLibrary/NowPlaying.txt');
+        if (!response.ok) throw new Error('Failed to fetch file');
+        
+        const text = await response.text();
+        const lines = text.split('\n');
+        
+        if (lines.length < 4) {
+          throw new Error("File format is invalid");
+        }
+        
+        document.getElementById("songTitle").textContent = lines[0].replace('Title: ', '') || "Unknown";
+        document.getElementById("artist").textContent = lines[1].replace('Artist: ', '') || "Unknown";
+        document.getElementById("album").textContent = lines[2].replace('Album: ', '') || "Unknown";
+        document.getElementById("duration").textContent = lines[3].replace('Time: ', '') || "Unknown";
+        
+        // Reset retry count on successful read
+        retryCount = 0;
+      } catch (error) {
+        console.error("Error reading file:", error);
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          console.log(`Retrying in 3 seconds... (Attempt ${retryCount} of ${MAX_RETRIES})`);
+          setTimeout(readNowPlayingFile, RETRY_DELAY);
+        } else {
+          document.getElementById("songTitle").textContent = "Error loading file";
+          document.getElementById("artist").textContent = "Please check console";
+          document.getElementById("album").textContent = "-";
+          document.getElementById("duration").textContent = "-";
+        }
+      }
+    }
+
+    // Start the update interval
+    setInterval(readNowPlayingFile, 1000);
+    // Initial read
+    readNowPlayingFile();
+  </script>
+</body>
+</html>
